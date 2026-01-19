@@ -1,6 +1,6 @@
 # Speed Reader App
 
-A highly efficient macOS application designed to help users read documents faster using RSVP (Rapid Serial Visual Presentation) and other speed-reading techniques.
+An iOS and macOS application designed to help users read documents faster using RSVP (Rapid Serial Visual Presentation) and other speed-reading techniques.
 
 ## Features
 
@@ -12,12 +12,14 @@ A highly efficient macOS application designed to help users read documents faste
 
 ## Architecture
 
-- **SwiftUI**: Modern user interface.
-- **PDFKit**: Robust PDF handling.
-- **CoreGraphics**: High-performance text rendering.
+- **SwiftUI**
+- **PDFKit**
+- **CoreGraphics**
 
 ## Getting Started
 
 1. Clone the repository.
 2. Open `Reader.xcodeproj` in Xcode.
 3. Build and Run (Cmd+R).
+
+# Vibe Coded (Gemini 3 Flash + Pro)... I didn't even look at the code. It works though.
