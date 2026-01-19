@@ -6,61 +6,103 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    let document: ReaderDocument
+    @State private var readingMode: ReadingMode = .wordFlash
+    
+    // View State for Async Loading
+    @State private var pages: [String] = []
+    @State private var isLoading = true
+    
+    // Full Screen Mode
+    @State private var isFullScreen = false
+    
+    enum ReadingMode: String, CaseIterable, Identifiable {
+        case wordFlash = "Word Flash"
+        case boldPrefix = "Bold Prefix"
+        var id: String { self.rawValue }
+    }
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        Group {
+            if isLoading {
+                VStack(spacing: 20) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Analyzing Document...")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 0) {
+                    if !isFullScreen {
+                        Picker("Reading Mode", selection: $readingMode) {
+                            ForEach(ReadingMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding()
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    
+                    if !isFullScreen {
+                        Spacer()
+                    }
+                    
+                    switch readingMode {
+                    case .wordFlash:
+                        WordFlashView(pages: pages)
+                    case .boldPrefix:
+                        BoldPrefixView(text: pages.joined(separator: "\n"), onToggleFullScreen: {
+                            withAnimation {
+                                isFullScreen.toggle()
+                            }
+                        })
+                    }
+                    
+                    if !isFullScreen {
+                        Spacer()
                     }
                 }
-                .onDelete(perform: deleteItems)
+                .padding(isFullScreen ? 0 : 16)
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+        .task {
+            await loadDocument()
         }
+        #if os(iOS)
+        .toolbar(isFullScreen ? .hidden : .visible, for: .navigationBar)
+        .statusBar(hidden: isFullScreen)
+        #endif
     }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+    
+    private func loadDocument() async {
+        // If document already has pages (e.g. from init blank), use them
+        if !document.pages.isEmpty {
+            self.pages = document.pages
+            self.isLoading = false
+            return
+        }
+        
+        // Otherwise extract from raw data
+        guard let data = document.rawData, let type = document.fileType else { return }
+        
+        self.isLoading = true
+        
+        // Run extraction in background
+        let extractedPages = await Task.detached(priority: .userInitiated) {
+            return ContentExtractor.extractText(from: data, type: type)
+        }.value
+        
+        await MainActor.run {
+            self.pages = extractedPages
+            self.isLoading = false
         }
     }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+    ContentView(document: ReaderDocument())
 }
