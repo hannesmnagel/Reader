@@ -22,4 +22,4 @@ An iOS and macOS application designed to help users read documents faster using 
 2. Open `Reader.xcodeproj` in Xcode.
 3. Build and Run (Cmd+R).
 
-# Vibe Coded (Gemini 3 Flash + Pro)... I didn't even look at the code. It works though.
+## Vibe Coded (Gemini 3 Flash + Pro)... I didn't even look at the code. It works though.
